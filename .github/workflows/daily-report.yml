@@ -1,0 +1,42 @@
+name: Bao cao chung khoan dinh ky (8h00 & 15h00)
+
+# Lưu ý: GitHub Actions chạy theo giờ UTC, Việt Nam = UTC+7
+#   08:00 giờ VN -> 01:00 UTC
+#   15:00 giờ VN -> 08:00 UTC
+on:
+  schedule:
+    - cron: '0 1 * * 1-5'   # 08:00 sáng (Thứ 2 - Thứ 6, giờ Việt Nam)
+    - cron: '0 8 * * 1-5'   # 15:00 chiều (Thứ 2 - Thứ 6, giờ Việt Nam)
+  workflow_dispatch: {}      # cho phép bấm "Run workflow" trên GitHub để test thủ công
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cài đặt thư viện
+        run: pip install -r requirements.txt
+
+      - name: Xác định nhãn báo cáo (sáng/chiều) theo giờ UTC hiện tại
+        id: label
+        run: |
+          HOUR_UTC=$(date -u +%H)
+          if [ "$HOUR_UTC" = "01" ]; then
+            echo "label=Báo cáo SÁNG (08:00)" >> "$GITHUB_OUTPUT"
+          else
+            echo "label=Báo cáo CHIỀU (15:00)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Chạy báo cáo và gửi Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python main.py --label "${{ steps.label.outputs.label }}"
