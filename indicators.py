@@ -26,6 +26,21 @@ def calculate_rsi(df: pd.DataFrame, period: int = config.RSI_PERIOD) -> pd.Serie
     return rsi
 
 
+def calculate_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """
+    Average True Range - đo độ biến động thực tế của giá, dùng để đặt
+    điểm dừng lỗ theo biến động thật của từng mã (mã biến động mạnh cần
+    dừng lỗ rộng hơn mã ít biến động).
+    """
+    high_low = df["high"] - df["low"]
+    high_close = (df["high"] - df["close"].shift()).abs()
+    low_close = (df["low"] - df["close"].shift()).abs()
+    true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = true_range.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    atr = atr.fillna(true_range.rolling(period, min_periods=1).mean())
+    return atr
+
+
 def calculate_ma(df: pd.DataFrame, period: int = config.MA_PERIOD) -> pd.Series:
     """Đường trung bình động đơn giản (SMA)."""
     return df["close"].rolling(window=period, min_periods=1).mean()
@@ -73,6 +88,7 @@ def analyze_symbol(df: pd.DataFrame) -> dict:
     df = df.copy()
     df["rsi"] = calculate_rsi(df)
     df["ma20"] = calculate_ma(df)
+    df["atr"] = calculate_atr(df)
 
     last = df.iloc[-1]
     prev = df.iloc[-2] if len(df) > 1 else last
@@ -100,6 +116,9 @@ def analyze_symbol(df: pd.DataFrame) -> dict:
         "rsi_state": rsi_state,
         "ma20": round(float(last["ma20"]), 2),
         "ma_trend": ma_trend,
+        "atr": round(float(last["atr"]), 2),
+        "recent_low_20": round(float(df["low"].iloc[-20:].min()), 2),
+        "resistance_60": round(float(df["high"].iloc[-60:].max()), 2) if len(df) >= 5 else None,
         "breakout": breakout,
         "volume": int(last["volume"]),
     }

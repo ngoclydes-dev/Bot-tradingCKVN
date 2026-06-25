@@ -16,6 +16,7 @@ import logging
 import config
 import data_fetcher
 import indicators
+import entry_strategy
 import market_hours
 import state_store
 import telegram_notifier
@@ -29,12 +30,14 @@ logger = logging.getLogger("realtime_alert")
 
 def format_breakout_alert(symbol: str, technical: dict) -> str:
     b = technical["breakout"]
+    entry = entry_strategy.suggest_entry(technical)
     return (
         f"🚨 *BREAKOUT REAL-TIME: {symbol}*\n"
         f"Giá hiện tại: {technical['last_close']:,.0f} đ ({technical['change_pct']:+.2f}%)\n"
         f"Vượt kháng cự: {b['resistance_level']:,.0f} đ | Volume x{b['volume_ratio']}\n"
         f"RSI({config.RSI_PERIOD}): {technical['rsi']} ({technical['rsi_state']}) | "
-        f"MA20: {technical['ma20']:,.0f} ({technical['ma_trend']})\n"
+        f"MA20: {technical['ma20']:,.0f} ({technical['ma_trend']})\n\n"
+        f"{entry_strategy.format_entry_block(entry)}\n\n"
         f"_Đây là cảnh báo kỹ thuật nhanh, xem báo cáo 8h/15h để có phân tích AI + tin tức đầy đủ._"
     )
 

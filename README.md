@@ -22,6 +22,8 @@ Phân tích AI tin tức (Claude API, fallback rule-based nếu không có key)
   ↓
 Tính xác suất tăng giá (kết hợp RSI + MA + Breakout + Sentiment tin tức)
   ↓
+Đề xuất điểm vào / dừng lỗ / chốt lời (entry_strategy.py)
+  ↓
 Gửi tín hiệu/báo cáo qua Telegram
 ```
 
@@ -37,6 +39,7 @@ Gửi tín hiệu/báo cáo qua Telegram
 ├── indicators.py           # RSI, MA20, breakout detection
 ├── news_fetcher.py         # Lấy tin tức từ RSS chứng khoán VN
 ├── ai_analyzer.py          # Phân tích sentiment AI + tính xác suất tăng giá
+├── entry_strategy.py       # Đề xuất điểm vào / dừng lỗ / chốt lời theo 3 kịch bản kỹ thuật
 ├── telegram_notifier.py    # Gửi tin nhắn Telegram
 ├── market_hours.py         # Kiểm tra có đang trong phiên giao dịch HOSE/HNX không
 ├── state_store.py          # Lưu trạng thái đã cảnh báo (chống gửi trùng)
@@ -137,6 +140,23 @@ Sửa trong `config.py`:
 - `BREAKOUT_LOOKBACK`, `BREAKOUT_VOLUME_MULTIPLIER`: độ nhạy phát hiện breakout.
 - `NEWS_RSS_FEEDS`: thêm/bớt nguồn tin RSS.
 - `WEIGHTS`: trọng số kết hợp các tín hiệu khi tính xác suất tăng giá (tổng nên = 1.0).
+- `STOP_LOSS_ATR_MULTIPLIER`, `RISK_REWARD_TARGET`, `PULLBACK_MAX_DISTANCE_PCT`: độ rộng dừng lỗ
+  và tỷ lệ R:R mục tiêu khi đề xuất điểm vào (xem mục "Đề xuất điểm vào" bên dưới).
+
+## Đề xuất điểm vào / dừng lỗ / chốt lời
+
+Mỗi mã trong báo cáo sẽ kèm 1 trong 4 kết quả từ `entry_strategy.py`, dựa theo setup kỹ thuật
+hiện tại — **không** dùng cho mọi mã cùng lúc, chỉ áp dụng đúng kịch bản phù hợp:
+
+| Setup | Điều kiện kích hoạt | Dừng lỗ | Chốt lời |
+|---|---|---|---|
+| 🚀 Breakout | Giá vừa vượt kháng cự kèm volume xác nhận | Dưới kháng cự vừa phá − 1.5×ATR | Entry + 2×Risk (R:R 1:2) |
+| 📈 Pullback MA20 | Xu hướng tăng, giá đang hồi về gần MA20 (≤3%) | Dưới MA20 − 1.5×ATR | Kháng cự gần nhất 60 phiên, hoặc R:R 1:2 |
+| 🔄 Hồi phục quá bán | RSI ≤ 30 | Dưới đáy 20 phiên gần nhất | MA20, hoặc R:R 1:2 |
+| — Không có setup | Không khớp 3 kịch bản trên (VD: downtrend, RSI quá mua) | — | — |
+
+Đây là gợi ý dựa trên quy tắc kỹ thuật phổ biến (rule-based), **không phải khuyến nghị đầu tư
+được kiểm chứng**. Luôn tự quản trị rủi ro, không vào lệnh vượt quá khả năng chịu rủi ro của bạn.
 
 ### 5. Chạy thử
 

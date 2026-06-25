@@ -20,6 +20,7 @@ import data_fetcher
 import indicators
 import news_fetcher
 import ai_analyzer
+import entry_strategy
 import telegram_notifier
 
 logging.basicConfig(
@@ -41,6 +42,7 @@ def analyze_one_symbol(symbol: str, all_news: list[dict]) -> dict | None:
     symbol_news = news_fetcher.filter_news_by_symbol(all_news, symbol)
     sentiment = ai_analyzer.analyze_news_sentiment(symbol, symbol_news)
     prediction = ai_analyzer.predict_probability(technical, sentiment)
+    entry = entry_strategy.suggest_entry(technical)
 
     return {
         "symbol": symbol,
@@ -48,6 +50,7 @@ def analyze_one_symbol(symbol: str, all_news: list[dict]) -> dict | None:
         "news": symbol_news,
         "sentiment": sentiment,
         "prediction": prediction,
+        "entry": entry,
     }
 
 
@@ -67,6 +70,7 @@ def format_symbol_block(result: dict) -> str:
         + (f" — vượt kháng cự {b['resistance_level']:,.0f}, vol x{b['volume_ratio']}" if b["is_breakout"] else ""),
         f"Tin tức liên quan: {len(result['news'])} bài | Sentiment AI: {result['sentiment']['score']:+.2f}",
         f"➡️ *Xác suất tăng giá: {p['probability_up_pct']}%* — {p['label']}",
+        entry_strategy.format_entry_block(result["entry"]),
     ]
     return "\n".join(lines)
 

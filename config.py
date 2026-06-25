@@ -21,8 +21,8 @@ ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 # ====== DANH SÁCH MÃ THEO DÕI (HOSE/HNX) ======
 # Thêm/sửa mã tùy ý. Có thể tách riêng theo sàn nếu cần.
 WATCHLIST = [
-    "VNM", "VCB", "FPT", "ACB", "VIC",
-    "MWG", "SSI", "VHM", "POW", "TCB",
+    "VNM", "VCB", "FPT", "HPG", "VIC",
+    "MWG", "SSI", "VHM", "MBB", "TCB",
 ]
 
 # ====== THAM SỐ KỸ THUẬT ======
@@ -67,6 +67,11 @@ REALTIME_SCAN_WEEKDAYS_ONLY = True
 
 # File lưu trạng thái đã cảnh báo (để tránh gửi trùng nhiều lần/ngày cho cùng 1 mã)
 STATE_FILE = "state/breakout_state.json"
+
+# ====== ĐỀ XUẤT ĐIỂM VÀO / DỪNG LỖ / CHỐT LỜI ======
+STOP_LOSS_ATR_MULTIPLIER = 1.5   # dừng lỗ = mức tham chiếu - 1.5 x ATR(14)
+RISK_REWARD_TARGET = 2.0          # tỷ lệ Reward:Risk mục tiêu khi không có kháng cự rõ để làm target
+PULLBACK_MAX_DISTANCE_PCT = 3.0   # giá lệch khỏi MA20 tối đa bao nhiêu % để còn coi là "đang pullback"
 
 # ====== TRỌNG SỐ CHO MÔ HÌNH XÁC SUẤT TĂNG GIÁ ======
 # Tổng các trọng số kỹ thuật + tin tức = 1.0
