@@ -22,7 +22,12 @@ import news_fetcher
 import ai_analyzer
 import entry_strategy
 import telegram_notifier
-
+import state_store 
+import json, os
+if not os.path.exists(config.STATE_FILE):
+    os.makedirs(os.path.dirname(config.STATE_FILE), exist_ok=True)
+    with open(config.STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
