@@ -21,8 +21,7 @@ ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 # ====== DANH SÁCH MÃ THEO DÕI (HOSE/HNX) ======
 # Thêm/sửa mã tùy ý. Có thể tách riêng theo sàn nếu cần.
 WATCHLIST = [
-    "VNM", "VCB", "FPT", "VIC",
-    "MWG", "SSI", "VHM", "POW", "TCB",
+    "VNM", "VCB", "FPT", "VIC", "SSI", "VHM", "POW", "TCB",
 ]
 
 # ====== THAM SỐ KỸ THUẬT ======
