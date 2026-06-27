@@ -27,12 +27,15 @@ jobs:
       - name: Xác định nhãn báo cáo (sáng/chiều) theo giờ UTC hiện tại
         id: label
         run: |
+      - name: Xác định nhãn báo cáo (sáng/chiều) theo giờ UTC hiện tại
+        id: label
+        run: |
           HOUR_UTC=$(date -u +%H)
           DATE_VN=$(TZ='Asia/Ho_Chi_Minh' date +'%d/%m/%Y')
           if [ "$HOUR_UTC" = "01" ]; then
-            echo "label=Báo cáo SÁNG (08:00)" $DATE_VN" >> "$GITHUB_OUTPUT"
+            echo "label=Báo cáo SÁNG (08:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
           else
-            echo "label=Báo cáo CHIỀU (15:00)" $DATE_VN" >> "$GITHUB_OUTPUT"
+            echo "label=Báo cáo CHIỀU (15:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Chạy báo cáo và gửi Telegram
