@@ -27,9 +27,6 @@ jobs:
       - name: Xác định nhãn báo cáo (sáng/chiều) theo giờ UTC hiện tại
         id: label
         run: |
-      - name: Xác định nhãn báo cáo (sáng/chiều) theo giờ UTC hiện tại
-        id: label
-        run: |
           HOUR_UTC=$(date -u +%H)
           DATE_VN=$(TZ='Asia/Ho_Chi_Minh' date +'%d/%m/%Y')
           if [ "$HOUR_UTC" = "01" ]; then
