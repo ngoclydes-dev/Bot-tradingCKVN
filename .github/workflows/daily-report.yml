@@ -4,11 +4,7 @@ name: Bao cao chung khoan dinh ky (8h00 & 15h00)
 #   08:00 giờ VN -> 01:00 UTC
 #   15:00 giờ VN -> 08:00 UTC
 on:
-  schedule:
-    - cron: '0 1 * * 1-5'   # 08:00 sáng (Thứ 2 - Thứ 6, giờ Việt Nam)
-    - cron: '0 8 * * 1-5'   # 15:00 chiều (Thứ 2 - Thứ 6, giờ Việt Nam)
-  workflow_dispatch: {}      # cho phép bấm "Run workflow" trên GitHub để test thủ công
-
+  workflow_dispatch: {}      # chỉ kích hoạt qua cron-job.org hoặc bấm tay, không dùng lịch GitHub gốc
 jobs:
   send-report:
     runs-on: ubuntu-latest
