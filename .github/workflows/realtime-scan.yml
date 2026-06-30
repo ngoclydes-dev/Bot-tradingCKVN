@@ -1,14 +1,11 @@
 name: Quet breakout real-time
 
-# Phiên giao dịch HOSE/HNX (giờ VN): 9h15-11h30 và 13h00-14h45
-# Đổi sang UTC (VN = UTC+7): 02:15-04:30 và 06:00-07:45
-# Cron dưới đây lấy khung giờ rộng hơn một chút (02:00-04:45 và 06:00-07:45) và
-# chạy mỗi 15 phút; market_hours.py trong code sẽ tự lọc chính xác lại, nên
-# không lo bị gửi sai giờ - chỉ tốn thêm vài lần "chạy không làm gì" ngoài lề.
+# Lich chay duoc dieu khien hoan toan boi cron-job.org (goi workflow_dispatch),
+# KHONG dung "schedule" cua GitHub de tranh bi tre gio hoac chay trung 2 nguon.
 on:
   workflow_dispatch: {}
 
-# Cần quyền ghi để bot tự commit lại file trạng thái chống gửi cảnh báo trùng
+# Can quyen ghi de bot tu commit lai file trang thai chong gui canh bao trung
 permissions:
   contents: write
 
@@ -24,16 +21,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Cài đặt thư viện
+      - name: Cai dat thu vien
         run: pip install -r requirements.txt
 
-      - name: Quét breakout & gửi cảnh báo nếu có
+      - name: Quet breakout va gui canh bao neu co
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python realtime_alert.py
 
-      - name: Lưu lại trạng thái đã cảnh báo (commit về repo)
+      - name: Luu lai trang thai da canh bao
         run: |
           git config user.name "vn-stock-bot"
           git config user.email "actions@users.noreply.github.com"
@@ -42,5 +39,5 @@ jobs:
             git commit -m "chore: cap nhat trang thai breakout [skip ci]"
             git push
           else
-            echo "Không có thay đổi trạng thái, bỏ qua commit."
+            echo "Khong co thay doi trang thai, bo qua commit."
           fi
