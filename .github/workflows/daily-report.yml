@@ -1,10 +1,10 @@
 name: Bao cao chung khoan dinh ky (8h00 & 15h00)
 
-# Lưu ý: GitHub Actions chạy theo giờ UTC, Việt Nam = UTC+7
-#   08:00 giờ VN -> 01:00 UTC
-#   15:00 giờ VN -> 08:00 UTC
+# Lưu ý: lịch chạy được điều khiển hoàn toàn bởi cron-job.org (gọi workflow_dispatch),
+# KHÔNG dùng "schedule" của GitHub để tránh bị trễ giờ hoặc chạy trùng 2 nguồn.
 on:
-  workflow_dispatch: {}      # chỉ kích hoạt qua cron-job.org hoặc bấm tay, không dùng lịch GitHub gốc
+  workflow_dispatch: {}
+
 jobs:
   send-report:
     runs-on: ubuntu-latest
@@ -17,21 +17,21 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Cài đặt thư viện
+      - name: Cai dat thu vien
         run: pip install -r requirements.txt
 
-      - name: Xác định nhãn báo cáo (sáng/chiều) theo giờ UTC hiện tại
+      - name: Xac dinh nhan bao cao theo gio Viet Nam
         id: label
         run: |
-          HOUR_UTC=$(date -u +%H)
+          HOUR_VN=$(TZ='Asia/Ho_Chi_Minh' date +%H)
           DATE_VN=$(TZ='Asia/Ho_Chi_Minh' date +'%d/%m/%Y')
-          if [ "$HOUR_UTC" = "01" ]; then
-            echo "label=Báo cáo SÁNG (08:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
+          if [ "$HOUR_VN" -lt "12" ]; then
+            echo "label=Bao cao SANG (08:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
           else
-            echo "label=Báo cáo CHIỀU (15:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
+            echo "label=Bao cao CHIEU (15:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Chạy báo cáo và gửi Telegram
+      - name: Chay bao cao va gui Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
