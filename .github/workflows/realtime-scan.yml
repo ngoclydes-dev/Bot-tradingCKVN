@@ -6,8 +6,6 @@ name: Quet breakout real-time
 # chạy mỗi 15 phút; market_hours.py trong code sẽ tự lọc chính xác lại, nên
 # không lo bị gửi sai giờ - chỉ tốn thêm vài lần "chạy không làm gì" ngoài lề.
 on:
-  schedule:
-    - cron: '*/15 2-4,6-7 * * 1-5'
   workflow_dispatch: {}
 
 # Cần quyền ghi để bot tự commit lại file trạng thái chống gửi cảnh báo trùng
