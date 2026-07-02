@@ -22,6 +22,7 @@ import indicators
 import news_fetcher
 import ai_analyzer
 import entry_strategy
+import deep_analysis
 import telegram_notifier
 
 logging.basicConfig(
@@ -168,28 +169,40 @@ def run_full_report(period_label: str = "Báo cáo định kỳ"):
 
 
 def run_single_scan(symbol: str, send_telegram: bool = False):
-    all_news = news_fetcher.fetch_all_news()
-    result = analyze_one_symbol(symbol.upper(), all_news)
-    if result is None:
-        msg = f"❌ Không lấy được dữ liệu cho mã *{symbol}* — mã có thể không hợp lệ hoặc nguồn dữ liệu tạm lỗi."
+    """Phân tích chuyên sâu 1 mã — chi tiết hơn nhiều so với báo cáo hằng ngày."""
+    logger.info("Bắt đầu phân tích chuyên sâu mã %s ...", symbol)
+    symbol = symbol.upper()
+
+    try:
+        df = data_fetcher.get_stock_history(symbol, days=config.HISTORY_DAYS)
+    except Exception as e:
+        msg = f"❌ Không lấy được dữ liệu cho mã *{symbol}* — mã có thể không hợp lệ hoặc nguồn dữ liệu tạm lỗi.\n_{e}_"
         if send_telegram:
             telegram_notifier.send_message(msg)
         else:
             print(msg)
         return
 
-    block = format_symbol_block(result)
-    sentiment_note = ""
-    if result["sentiment"].get("summary"):
-        sentiment_note = f"\n\n🤖 *Nhận định AI:* _{result['sentiment']['summary']}_"
+    # Phân tích cơ bản (dùng chung với báo cáo hằng ngày)
+    technical   = indicators.analyze_symbol(df)
+    symbol_news = news_fetcher.filter_news_by_symbol(
+        news_fetcher.fetch_all_news(), symbol
+    )
+    sentiment   = ai_analyzer.analyze_news_sentiment(symbol, symbol_news)
+    prediction  = ai_analyzer.predict_probability(technical, sentiment)
+    entry       = entry_strategy.suggest_entry(technical)
 
-    full_msg = f"🔍 *PHÂN TÍCH THEO YÊU CẦU: {symbol}*\n\n{block}{sentiment_note}"
+    # Phân tích chuyên sâu bổ sung (chỉ dùng cho /scan)
+    deep = deep_analysis.run_deep_scan(symbol, df, technical, symbol_news)
+
+    # Render báo cáo chuyên sâu
+    report = deep_analysis.format_deep_report(symbol, technical, deep, entry, prediction)
 
     if send_telegram:
-        telegram_notifier.send_message(full_msg)
-        logger.info("Đã gửi phân tích %s qua Telegram.", symbol)
+        telegram_notifier.send_message(report)
+        logger.info("Đã gửi phân tích chuyên sâu %s qua Telegram.", symbol)
     else:
-        print(full_msg)
+        print(report)
 
 
 if __name__ == "__main__":
