@@ -13,6 +13,7 @@ Có 2 cách chạy:
 """
 import argparse
 import logging
+import random
 import sys
 
 import config
@@ -22,17 +23,58 @@ import news_fetcher
 import ai_analyzer
 import entry_strategy
 import telegram_notifier
-import state_store 
-import json, os
-if not os.path.exists(config.STATE_FILE):
-    os.makedirs(os.path.dirname(config.STATE_FILE), exist_ok=True)
-    with open(config.STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("main")
+
+# ====== CÂU QUOTE CHO BÁO CÁO ======
+QUOTES = [
+    # Quản trị rủi ro
+    ("Quy tắc số 1: đừng bao giờ thua lỗ. Quy tắc số 2: đừng quên quy tắc số 1.", "Warren Buffett"),
+    ("Rủi ro đến từ việc không biết mình đang làm gì.", "Warren Buffett"),
+    ("Thị trường có thể phi lý lâu hơn bạn có thể duy trì khả năng thanh khoản.", "John Maynard Keynes"),
+    ("Không phải về việc đúng hay sai — mà về việc bạn kiếm được bao nhiêu khi đúng và mất bao nhiêu khi sai.", "George Soros"),
+    ("Điều quan trọng nhất khi đầu tư là bảo toàn vốn, sau đó mới nghĩ đến lợi nhuận.", "Jesse Livermore"),
+
+    # Kỷ luật & tâm lý
+    ("Thị trường chứng khoán là công cụ chuyển tiền từ người thiếu kiên nhẫn sang người kiên nhẫn.", "Warren Buffett"),
+    ("Kẻ thù lớn nhất của nhà đầu tư chính là bản thân họ.", "Benjamin Graham"),
+    ("Đừng để cảm xúc điều khiển quyết định đầu tư của bạn.", "Peter Lynch"),
+    ("Mua khi người khác sợ hãi, bán khi người khác tham lam.", "Warren Buffett"),
+    ("Kỷ luật là cầu nối giữa mục tiêu và thành tựu.", "Jim Rohn"),
+    ("Thành công trong đầu tư không đến từ IQ cao mà đến từ kỷ luật cảm xúc.", "Benjamin Graham"),
+
+    # Chiến lược & phân tích
+    ("Xu hướng là bạn của bạn — cho đến khi nó kết thúc.", "Ed Seykota"),
+    ("Hãy cắt lỗ ngắn và để lợi nhuận chạy dài.", "Jesse Livermore"),
+    ("Đừng bắt đáy, hãy mua khi xu hướng đã xác nhận.", "Vô danh"),
+    ("Phân tích kỹ thuật không phải để đoán tương lai, mà để quản lý xác suất.", "Vô danh"),
+    ("Volume là dấu chân của dòng tiền thông minh.", "Vô danh"),
+    ("Giá cả là thứ bạn trả. Giá trị là thứ bạn nhận được.", "Warren Buffett"),
+    ("Hãy sợ khi người khác tham lam và tham lam khi người khác sợ.", "Warren Buffett"),
+
+    # Học hỏi & kiên nhẫn
+    ("Thị trường là người thầy tốt nhất — nhưng học phí rất đắt.", "Vô danh"),
+    ("Nhà đầu tư giỏi nhất thế giới đều có một điểm chung: họ kiên nhẫn hơn người khác.", "Vô danh"),
+    ("Đầu tư là quá trình tự học không ngừng. Ngày bạn ngừng học là ngày bạn bắt đầu thua lỗ.", "Vô danh"),
+    ("Mỗi ngày thị trường đều dạy bạn điều gì đó — hãy luôn sẵn sàng học.", "Vô danh"),
+    ("Không ai có thể đánh bại thị trường mãi mãi — hãy tôn trọng nó.", "Vô danh"),
+]
+
+
+def get_daily_quote() -> str:
+    """
+    Lấy câu quote theo ngày (dùng ngày làm seed) để cùng 1 ngày luôn
+    ra cùng 1 câu, tránh báo cáo sáng/chiều ra 2 câu khác nhau.
+    """
+    from datetime import date
+    seed = int(date.today().strftime("%Y%m%d"))
+    rng = random.Random(seed)
+    quote, author = rng.choice(QUOTES)
+    return f'💬 _"{quote}"_\n— {author}'
 
 
 def analyze_one_symbol(symbol: str, all_news: list[dict]) -> dict | None:
@@ -111,7 +153,8 @@ def build_full_report(period_label: str) -> str:
 
     body = "\n\n".join(blocks) if blocks else "_Không lấy được dữ liệu cho bất kỳ mã nào._"
 
-    return f"{header}{summary}\n{body}"
+    quote = get_daily_quote()
+    return f"{header}{summary}\n{body}\n\n{quote}"
 
 
 def run_full_report(period_label: str = "Báo cáo định kỳ"):
@@ -124,26 +167,41 @@ def run_full_report(period_label: str = "Báo cáo định kỳ"):
     return report
 
 
-def run_single_scan(symbol: str):
+def run_single_scan(symbol: str, send_telegram: bool = False):
     all_news = news_fetcher.fetch_all_news()
     result = analyze_one_symbol(symbol.upper(), all_news)
     if result is None:
-        print(f"Không lấy được dữ liệu cho mã {symbol}")
+        msg = f"❌ Không lấy được dữ liệu cho mã *{symbol}* — mã có thể không hợp lệ hoặc nguồn dữ liệu tạm lỗi."
+        if send_telegram:
+            telegram_notifier.send_message(msg)
+        else:
+            print(msg)
         return
-    print(format_symbol_block(result))
+
+    block = format_symbol_block(result)
+    sentiment_note = ""
     if result["sentiment"].get("summary"):
-        print(f"\nNhận định AI: {result['sentiment']['summary']}")
+        sentiment_note = f"\n\n🤖 *Nhận định AI:* _{result['sentiment']['summary']}_"
+
+    full_msg = f"🔍 *PHÂN TÍCH THEO YÊU CẦU: {symbol}*\n\n{block}{sentiment_note}"
+
+    if send_telegram:
+        telegram_notifier.send_message(full_msg)
+        logger.info("Đã gửi phân tích %s qua Telegram.", symbol)
+    else:
+        print(full_msg)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bot phân tích & cảnh báo chứng khoán Việt Nam")
-    parser.add_argument("--scan", help="Chỉ phân tích nhanh 1 mã (in ra terminal, không gửi Telegram)")
+    parser.add_argument("--scan", help="Phân tích nhanh 1 mã")
+    parser.add_argument("--telegram", action="store_true", help="Gửi kết quả --scan về Telegram (dùng khi gọi từ GitHub Actions)")
     parser.add_argument("--no-telegram", action="store_true", help="Chỉ in báo cáo ra terminal, không gửi Telegram")
-    parser.add_argument("--label", default=None, help="Nhãn hiển thị trên báo cáo (VD: 'Báo cáo SÁNG (08:00)'), dùng khi gọi từ GitHub Actions/cron")
+    parser.add_argument("--label", default=None, help="Nhãn hiển thị trên báo cáo")
     args = parser.parse_args()
 
     if args.scan:
-        run_single_scan(args.scan)
+        run_single_scan(args.scan, send_telegram=args.telegram)
     elif args.no_telegram:
         print(build_full_report(args.label or "Chạy thủ công"))
     else:
