@@ -28,7 +28,7 @@ jobs:
           if [ "$HOUR_VN" -lt "12" ]; then
             echo "label=Bao cao SANG (08:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
           else
-            echo "label=Bao cao CHIEU (15:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
+            echo "label=Bao cao CHIEU (13:00) - $DATE_VN" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Chay bao cao va gui Telegram
