@@ -13,16 +13,11 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
-# ====== ANTHROPIC (AI phân tích tin tức + nhận định) ======
-# Để trống nếu chưa có key -> bot sẽ tự dùng phân tích rule-based, vẫn hoạt động.
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-
 # ====== DANH SÁCH MÃ THEO DÕI (HOSE/HNX) ======
 # Thêm/sửa mã tùy ý. Có thể tách riêng theo sàn nếu cần.
 WATCHLIST = [
-    "VNM", "VCB", "HPG", "VIC",
-    "VHM", "POWW", "TCB",
+    "VNM", "VCB", "FPT", "HPG", "VIC",
+    "MWG", "SSI", "VHM", "MBB", "TCB",
 ]
 
 # ====== THAM SỐ KỸ THUẬT ======
@@ -83,9 +78,12 @@ WEIGHTS = {
 }
 
 # ====== API KEYS CHO ĐA AI ======
-OPENAI_API_KEY  = ""  # GPT-4o — lấy tại platform.openai.com
-GEMINI_API_KEY  = ""  # Gemini — lấy tại aistudio.google.com
+# Đọc từ biến môi trường (GitHub Secrets) — KHÔNG hardcode key vào đây
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY    = os.getenv("OPENAI_API_KEY", "")
+GEMINI_API_KEY    = os.getenv("GEMINI_API_KEY", "")
 
 # Model dùng cho từng AI (dễ đổi phiên bản sau này)
-OPENAI_MODEL  = "gpt-4o-mini"   # hoặc "gpt-4o" nếu muốn mạnh hơn
-GEMINI_MODEL  = "gemini-1.5-flash"  # hoặc "gemini-1.5-pro"
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+OPENAI_MODEL    = "gpt-4o-mini"       # hoặc "gpt-4o" nếu muốn mạnh hơn
+GEMINI_MODEL    = "gemini-1.5-flash"  # hoặc "gemini-1.5-pro"
