@@ -23,6 +23,7 @@ import news_fetcher
 import ai_analyzer
 import entry_strategy
 import deep_analysis
+import market_summary_ai
 import telegram_notifier
 
 logging.basicConfig(
@@ -129,6 +130,7 @@ def build_full_report(period_label: str) -> str:
     all_news = news_fetcher.fetch_all_news()
 
     blocks = []
+    all_results = []   # lưu để truyền cho market_summary_ai
     breakout_symbols = []
     high_prob_symbols = []
 
@@ -138,6 +140,7 @@ def build_full_report(period_label: str) -> str:
         if result is None:
             continue
         blocks.append(format_symbol_block(result))
+        all_results.append(result)
         if result["technical"]["breakout"]["is_breakout"]:
             breakout_symbols.append(symbol)
         if result["prediction"]["probability_up_pct"] >= 65:
@@ -154,8 +157,12 @@ def build_full_report(period_label: str) -> str:
 
     body = "\n\n".join(blocks) if blocks else "_Không lấy được dữ liệu cho bất kỳ mã nào._"
 
+    # Tổng kết thị trường bằng đa AI (gọi 1 lần cho cả watchlist)
+    logger.info("Đang tổng hợp nhận định thị trường từ đa AI...")
+    market_block = market_summary_ai.get_market_summary(all_results, period_label)
+
     quote = get_daily_quote()
-    return f"{header}{summary}\n{body}\n\n{quote}"
+    return f"{header}{summary}\n{body}\n\n{market_block}\n\n{quote}"
 
 
 def run_full_report(period_label: str = "Báo cáo định kỳ"):
