@@ -82,7 +82,7 @@ def suggest_entry(technical: dict) -> dict:
                     "với volume vẫn duy trì tốt.",
         }
 
-    # --- Kịch bản 2: PULLBACK VỀ MA20 (xu hướng tăng) ---
+    # --- Kịch bản 2: PULLBACK VỀ MA20 (xu hướng tăng, giá gần MA20) ---
     if technical["ma_trend"] == "tăng" and rsi < config.RSI_OVERBOUGHT:
         distance_pct = abs(last_close - ma20) / ma20 * 100 if ma20 else 999
         if distance_pct <= config.PULLBACK_MAX_DISTANCE_PCT:
@@ -107,6 +107,40 @@ def suggest_entry(technical: dict) -> dict:
                 "risk_reward": rr,
                 "note": "Chờ giá về gần MA20 và xác nhận giữ vững (không xuyên thủng kèm volume bán mạnh) "
                         "trước khi vào, tránh bắt dao khi MA20 bị phá.",
+            }
+
+    # --- Kịch bản 2b: UPTREND MẠNH, giá đã vượt MA20 xa — chờ hồi về ---
+    # POW scenario: xu hướng tăng mạnh (MA20 dốc lên, giá > MA20) nhưng giá đã vượt
+    # MA20 hơn 3% → không còn trong vùng pullback lý tưởng, nhưng setup vẫn tốt nếu
+    # chờ hồi. Đề xuất vùng mua khi giá pullback về MA20.
+    if (technical["ma_trend"] == "tăng" and
+        rsi < config.RSI_OVERBOUGHT and
+        last_close > ma20):
+        distance_pct = (last_close - ma20) / ma20 * 100 if ma20 else 999
+        # Chỉ đề xuất nếu giá chưa quá xa MA20 (trong 15%)
+        if distance_pct <= 15:
+            entry_low  = _round_price(ma20 * 0.99)
+            entry_high = _round_price(ma20 * 1.02)
+            stop_loss  = _round_price(ma20 - atr_mult * atr)
+            risk = entry_low - stop_loss
+            take_profit = (
+                _round_price(resistance_60) if resistance_60 and resistance_60 > last_close
+                else _round_price(entry_low + rr_target * risk) if risk > 0 else None
+            )
+            rr = (
+                round((take_profit - entry_low) / risk, 2)
+                if (risk and risk > 0 and take_profit) else None
+            )
+            return {
+                "setup": "⏳ Chờ pullback về MA20 — xu hướng tăng mạnh",
+                "entry_low": entry_low,
+                "entry_high": entry_high,
+                "stop_loss": stop_loss,
+                "take_profit": take_profit,
+                "risk_reward": rr,
+                "note": f"Giá đang cao hơn MA20 khoảng {distance_pct:.1f}% — "
+                        f"CHƯA vào ngay, chờ giá điều chỉnh về vùng {_round_price(entry_low)}–{_round_price(entry_high)} đ "
+                        f"rồi mới vào để có risk/reward tốt hơn.",
             }
 
     # --- Kịch bản 3: HỒI PHỤC TỪ QUÁ BÁN ---
