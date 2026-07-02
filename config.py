@@ -43,6 +43,7 @@ NEWS_RSS_FEEDS = {
     "CafeF": "https://cafef.vn/thi-truong-chung-khoan.rss",
     "VietstockFinance": "https://vietstock.vn/830/chung-khoan/co-phieu.rss",
     "NDH": "https://ndh.vn/chung-khoan.rss",
+    "VNE": "https://vneconomy.vn/thi-truong-chung-khoan.rss",
 }
 NEWS_MAX_ITEMS_PER_FEED = 15
 NEWS_LOOKBACK_HOURS = 18  # chỉ lấy tin trong khoảng X giờ gần nhất
