@@ -363,6 +363,30 @@ def run_deep_scan(symbol: str, df: pd.DataFrame,
     return deep
 
 
+def _fmt_price(value: float) -> str:
+    """
+    Format giá thông minh:
+    - Giá >= 1000 (đã nhân 1000, đơn vị đồng thực): dùng dấu phẩy, không số lẻ
+      VD: 15200 -> "15,200"
+    - Giá < 1000 (dữ liệu vnstock trả về đơn vị nghìn đồng):
+      nhân 1000 rồi hiển thị
+      VD: 15.2 -> "15,200"
+    Luôn hiển thị giá thực tế theo đơn vị đồng VN để dễ đọc.
+    """
+    # vnstock trả về giá đơn vị nghìn đồng (VD: 15.2 = 15,200đ)
+    # Nhân 1000 nếu giá < 1000 để hiển thị đúng
+    real = value * 1000 if value < 1000 else value
+    return f"{real:,.0f}"
+
+
+def _fmt_atr(value: float) -> str:
+    """ATR cũng cần nhân 1000 nếu dữ liệu đơn vị nghìn đồng."""
+    real = value * 1000 if value < 1000 else value
+    if real < 100:
+        return f"{real:,.1f}"
+    return f"{real:,.0f}"
+
+
 def format_deep_report(symbol: str, technical: dict, deep: dict,
                        entry: dict, prediction: dict) -> str:
     """
@@ -381,7 +405,7 @@ def format_deep_report(symbol: str, technical: dict, deep: dict,
         f"{'─' * 30}",
 
         # ── Giá & tổng quan ──
-        f"💰 *Giá:* {t['last_close']:,.0f} đ  {change_icon} {t['change_pct']:+.2f}%",
+        f"💰 *Giá:* {_fmt_price(t['last_close'])} đ  {change_icon} {t['change_pct']:+.2f}%",
         f"📊 *Xác suất tăng giá:* {p['probability_up_pct']}% — {p['label']}",
         "",
 
@@ -392,7 +416,7 @@ def format_deep_report(symbol: str, technical: dict, deep: dict,
         f"• Stochastic: %K={d['stoch']['k']} %D={d['stoch']['d']} → {d['stoch']['state']} ({d['stoch']['signal']})",
         f"• Bollinger: {d['bb']['position']} | %B={d['bb']['pct_b']}",
         f"• ADX(14): {d['adx']['adx']} → {d['adx']['strength']}",
-        f"• MA20: {t['ma20']:,.0f} đ | Xu hướng: {t['ma_trend']}",
+        f"• MA20: {_fmt_price(t['ma20'])} đ | Xu hướng: {t['ma_trend']}",
         "",
 
         # ── Xu hướng đa khung ──
@@ -407,9 +431,9 @@ def format_deep_report(symbol: str, technical: dict, deep: dict,
     ]
 
     if sr["resistances"]:
-        lines.append("• Kháng cự: " + " → ".join(f"{r:,.0f}" for r in sr["resistances"]) + " đ")
+        lines.append("• Kháng cự: " + " → ".join(_fmt_price(r) for r in sr["resistances"]) + " đ")
     if sr["supports"]:
-        lines.append("• Hỗ trợ:   " + " → ".join(f"{s:,.0f}" for s in sr["supports"]) + " đ")
+        lines.append("• Hỗ trợ:   " + " → ".join(_fmt_price(s) for s in sr["supports"]) + " đ")
 
     lines += [
         "",
@@ -417,7 +441,7 @@ def format_deep_report(symbol: str, technical: dict, deep: dict,
         # ── Volume ──
         "📦 *KHỐI LƯỢNG GIAO DỊCH*",
         f"• {d['volume']['vol_vs_avg']}",
-        f"• Trend 5 phiên: {d['volume']['trend_5_phien']} | ATR(14): {t['atr']:,.0f} đ",
+        f"• Trend 5 phiên: {d['volume']['trend_5_phien']} | ATR(14): {_fmt_atr(t['atr'])} đ",
         "",
 
         # ── Nhận định đa AI ──
@@ -432,12 +456,12 @@ def format_deep_report(symbol: str, technical: dict, deep: dict,
     if entry["entry_low"] is not None:
         lines += [
             f"• Setup: {entry['setup']}",
-            f"• Vùng vào: {entry['entry_low']:,.0f} — {entry['entry_high']:,.0f} đ",
-            f"• Dừng lỗ: {entry['stop_loss']:,.0f} đ",
+            f"• Vùng vào: {_fmt_price(entry['entry_low'])} — {_fmt_price(entry['entry_high'])} đ",
+            f"• Dừng lỗ: {_fmt_price(entry['stop_loss'])} đ",
         ]
         if entry["take_profit"]:
             rr_text = f" (R:R ≈ 1:{entry['risk_reward']})" if entry["risk_reward"] else ""
-            lines.append(f"• Chốt lời: {entry['take_profit']:,.0f} đ{rr_text}")
+            lines.append(f"• Chốt lời: {_fmt_price(entry['take_profit'])} đ{rr_text}")
         lines.append(f"• _{entry['note']}_")
     else:
         lines.append(f"• _{entry['note']}_")
