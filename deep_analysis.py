@@ -346,6 +346,8 @@ def run_deep_scan(symbol: str, df: pd.DataFrame,
     Chạy toàn bộ phân tích chuyên sâu cho 1 mã.
     Trả về dict đầy đủ để format_deep_report() render thành tin nhắn Telegram.
     """
+    import multi_ai
+
     deep = {
         "macd":   calculate_macd(df),
         "bb":     calculate_bollinger(df),
@@ -355,7 +357,9 @@ def run_deep_scan(symbol: str, df: pd.DataFrame,
         "volume": analyze_volume_trend(df),
         "mtf":    multi_timeframe_trend(df),
     }
-    deep["ai_narrative"] = deep_ai_analysis(symbol, technical, deep, news_items)
+
+    # Gọi đa AI song song (Claude + GPT-4o + Gemini)
+    deep["multi_ai"] = multi_ai.analyze_multi_ai(symbol, technical, deep, news_items)
     return deep
 
 
@@ -363,9 +367,8 @@ def format_deep_report(symbol: str, technical: dict, deep: dict,
                        entry: dict, prediction: dict) -> str:
     """
     Render toàn bộ kết quả phân tích sâu thành tin nhắn Telegram Markdown.
-    Cấu trúc: Tổng quan → Đa chỉ báo → Khung thời gian → Hỗ trợ/Kháng cự
-              → Volume → Nhận định AI → Chiến lược vào lệnh → Xác suất
     """
+    import multi_ai as multi_ai_module
     t  = technical
     d  = deep
     p  = prediction
@@ -417,9 +420,8 @@ def format_deep_report(symbol: str, technical: dict, deep: dict,
         f"• Trend 5 phiên: {d['volume']['trend_5_phien']} | ATR(14): {t['atr']:,.0f} đ",
         "",
 
-        # ── Nhận định AI ──
-        "🤖 *NHẬN ĐỊNH AI*",
-        d["ai_narrative"],
+        # ── Nhận định đa AI ──
+        multi_ai_module.format_multi_ai_block(d["multi_ai"]),
         "",
 
         # ── Chiến lược vào lệnh ──
