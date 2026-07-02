@@ -153,13 +153,34 @@ def _call_gpt(prompt: str) -> dict | None:
 def _call_gemini(prompt: str) -> dict | None:
     if not config.GEMINI_API_KEY:
         return None
+    # Danh sách model thử lần lượt nếu model trước lỗi
+    models_to_try = [
+        config.GEMINI_MODEL,
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-pro",
+    ]
+    # Bỏ duplicate giữ thứ tự
+    seen = set()
+    models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
+
     try:
         import google.generativeai as genai
         genai.configure(api_key=config.GEMINI_API_KEY)
-        model = genai.GenerativeModel(config.GEMINI_MODEL)
-        resp = model.generate_content(prompt)
-        raw = resp.text or ""
-        return _parse_json_response(raw)
+        for model_name in models_to_try:
+            try:
+                model = genai.GenerativeModel(model_name)
+                resp  = model.generate_content(prompt)
+                raw   = resp.text or ""
+                result = _parse_json_response(raw)
+                if result:
+                    logger.info("Gemini OK với model: %s", model_name)
+                    return result
+            except Exception as inner:
+                logger.warning("Gemini model %s lỗi: %s — thử model tiếp theo...", model_name, inner)
+                continue
+        _ai_errors["Gemini"] = "Tất cả model đều lỗi — kiểm tra API key hoặc quota"
+        return None
     except Exception as e:
         _ai_errors["Gemini"] = f"lỗi: {str(e)[:80]}"
         logger.warning("Gemini: %s", e)
