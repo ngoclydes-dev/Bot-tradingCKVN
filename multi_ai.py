@@ -98,6 +98,11 @@ def _parse_json_response(raw: str) -> dict | None:
 
 # ===================== GỌI TỪNG AI =====================
 
+
+# Lưu lý do lỗi của từng AI để hiển thị trong báo cáo
+_ai_errors: dict[str, str] = {}
+
+
 def _call_claude(prompt: str) -> dict | None:
     if not config.ANTHROPIC_API_KEY:
         return None
@@ -112,7 +117,12 @@ def _call_claude(prompt: str) -> dict | None:
         raw = "".join(b.text for b in resp.content if b.type == "text")
         return _parse_json_response(raw)
     except Exception as e:
-        logger.warning("Claude lỗi: %s", e)
+        err = str(e)
+        if any(w in err.lower() for w in ["credit", "billing", "payment", "quota", "insufficient"]):
+            _ai_errors["Claude"] = "hết credit — cần nạp tiền tại console.anthropic.com"
+        else:
+            _ai_errors["Claude"] = f"lỗi: {err[:80]}"
+        logger.warning("Claude: %s", err)
         return None
 
 
@@ -131,7 +141,12 @@ def _call_gpt(prompt: str) -> dict | None:
         raw = resp.choices[0].message.content or ""
         return _parse_json_response(raw)
     except Exception as e:
-        logger.warning("GPT lỗi: %s", e)
+        err = str(e)
+        if any(w in err.lower() for w in ["quota", "billing", "insufficient", "exceeded"]):
+            _ai_errors["GPT-4o"] = "hết quota — free credit đã hết hạn hoặc cần nạp tiền"
+        else:
+            _ai_errors["GPT-4o"] = f"lỗi: {err[:80]}"
+        logger.warning("GPT: %s", err)
         return None
 
 
@@ -146,7 +161,8 @@ def _call_gemini(prompt: str) -> dict | None:
         raw = resp.text or ""
         return _parse_json_response(raw)
     except Exception as e:
-        logger.warning("Gemini lỗi: %s", e)
+        _ai_errors["Gemini"] = f"lỗi: {str(e)[:80]}"
+        logger.warning("Gemini: %s", e)
         return None
 
 
@@ -262,7 +278,27 @@ def analyze_multi_ai(symbol: str, technical: dict, deep: dict,
 def format_multi_ai_block(synthesis: dict) -> str:
     """Format kết quả tổng hợp 3 AI thành đoạn Markdown cho Telegram."""
     if not synthesis["available_ais"]:
-        return "🤖 *NHẬN ĐỊNH ĐA AI*\n_Chưa cấu hình API key cho AI nào._"
+        # Hiển thị lý do cụ thể từng AI thất bại
+        lines = ["🤖 *NHẬN ĐỊNH ĐA AI*"]
+        has_key = []
+        no_key  = []
+        if config.ANTHROPIC_API_KEY: has_key.append("Claude")
+        else: no_key.append("Claude")
+        if config.OPENAI_API_KEY: has_key.append("GPT-4o")
+        else: no_key.append("GPT-4o")
+        if config.GEMINI_API_KEY: has_key.append("Gemini")
+        else: no_key.append("Gemini")
+
+        if no_key:
+            lines.append(f"_Chưa có key: {', '.join(no_key)}_")
+        if has_key:
+            lines.append(f"_Có key nhưng gọi API thất bại: {', '.join(has_key)}_")
+            for name in has_key:
+                if name in _ai_errors:
+                    lines.append(f"  • {name}: {_ai_errors[name]}")
+        if not has_key and not no_key:
+            lines.append("_Chưa thêm API key nào vào GitHub Secrets._")
+        return "\n".join(lines)
 
     # Icon outlook
     outlook_icon = {
