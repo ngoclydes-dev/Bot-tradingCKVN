@@ -131,12 +131,21 @@ def _call_gpt(prompt: str) -> dict | None:
 def _call_gemini(prompt: str) -> dict | None:
     if not config.GEMINI_API_KEY:
         return None
+    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-pro"]
     try:
         import google.generativeai as genai
         genai.configure(api_key=config.GEMINI_API_KEY)
-        model = genai.GenerativeModel(config.GEMINI_MODEL)
-        resp = model.generate_content(prompt)
-        return _parse_response(resp.text or "")
+        for model_name in models_to_try:
+            try:
+                model = genai.GenerativeModel(model_name)
+                resp  = model.generate_content(prompt)
+                result = _parse_response(resp.text or "")
+                if result:
+                    return result
+            except Exception:
+                continue
+        logger.warning("Gemini market summary: tất cả model đều lỗi")
+        return None
     except Exception as e:
         logger.warning("Gemini market summary lỗi: %s", e)
         return None
