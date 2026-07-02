@@ -21,7 +21,8 @@ ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 # ====== DANH SÁCH MÃ THEO DÕI (HOSE/HNX) ======
 # Thêm/sửa mã tùy ý. Có thể tách riêng theo sàn nếu cần.
 WATCHLIST = [
-    "VNM", "VCB", "FPT", "VIC", "SSI", "VHM", "POW", "TCB",
+    "VNM", "VCB", "HPG", "VIC",
+    "VHM", "POWW", "TCB",
 ]
 
 # ====== THAM SỐ KỸ THUẬT ======
@@ -43,7 +44,6 @@ NEWS_RSS_FEEDS = {
     "CafeF": "https://cafef.vn/thi-truong-chung-khoan.rss",
     "VietstockFinance": "https://vietstock.vn/830/chung-khoan/co-phieu.rss",
     "NDH": "https://ndh.vn/chung-khoan.rss",
-    "VNE": "https://vneconomy.vn/thi-truong-chung-khoan.rss",
 }
 NEWS_MAX_ITEMS_PER_FEED = 15
 NEWS_LOOKBACK_HOURS = 18  # chỉ lấy tin trong khoảng X giờ gần nhất
@@ -81,3 +81,11 @@ WEIGHTS = {
     "breakout": 0.30,
     "news_sentiment": 0.20,
 }
+
+# ====== API KEYS CHO ĐA AI ======
+OPENAI_API_KEY  = ""  # GPT-4o — lấy tại platform.openai.com
+GEMINI_API_KEY  = ""  # Gemini — lấy tại aistudio.google.com
+
+# Model dùng cho từng AI (dễ đổi phiên bản sau này)
+OPENAI_MODEL  = "gpt-4o-mini"   # hoặc "gpt-4o" nếu muốn mạnh hơn
+GEMINI_MODEL  = "gemini-1.5-flash"  # hoặc "gemini-1.5-pro"
