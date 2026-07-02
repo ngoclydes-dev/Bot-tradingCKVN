@@ -1,0 +1,32 @@
+name: On-demand scan (lenh scan tu Telegram)
+
+# Chỉ kích hoạt qua workflow_dispatch (từ Cloudflare Worker khi nhận lệnh /scan)
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: 'Ma co phieu can phan tich (VD: VNM, FPT, HPG)'
+        required: true
+        type: string
+
+jobs:
+  scan-symbol:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cai dat thu vien
+        run: pip install -r requirements.txt
+
+      - name: Phan tich ma va gui Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python main.py --scan "${{ github.event.inputs.symbol }}" --telegram
