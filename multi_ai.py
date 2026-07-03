@@ -81,33 +81,44 @@ def _parse_json_response(raw: str) -> dict | None:
 def _call_gemini(prompt: str) -> dict | None:
     if not config.GEMINI_API_KEY:
         return None
+
+    import requests as req
+
+    # Dùng HTTP trực tiếp — không cần thư viện google-genai, tránh version conflict
     models_to_try = [
+        "gemini-2.5-flash",
         "gemini-2.0-flash",
         "gemini-2.0-flash-lite",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
     ]
-    try:
-        from google import genai
-        client = genai.Client(api_key=config.GEMINI_API_KEY)
-        for model_name in models_to_try:
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                )
-                raw = response.text or ""
+    base_url = "https://generativelanguage.googleapis.com/v1beta/models"
+
+    for model_name in models_to_try:
+        try:
+            url = f"{base_url}/{model_name}:generateContent?key={config.GEMINI_API_KEY}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500},
+            }
+            resp = req.post(url, json=payload, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                raw = (data.get("candidates", [{}])[0]
+                           .get("content", {})
+                           .get("parts", [{}])[0]
+                           .get("text", ""))
                 result = _parse_json_response(raw)
                 if result:
                     logger.info("Gemini OK voi model: %s", model_name)
                     return result
-            except Exception as inner:
-                logger.warning("Gemini model %s loi: %s", model_name, str(inner)[:80])
-                continue
-        return None
-    except Exception as e:
-        logger.warning("Gemini: %s", e)
-        return None
+            else:
+                logger.warning("Gemini %s HTTP %d: %s",
+                               model_name, resp.status_code, resp.text[:100])
+        except Exception as inner:
+            logger.warning("Gemini model %s loi: %s", model_name, str(inner)[:80])
+            continue
+
+    _ai_errors["Gemini"] = "Tat ca model deu loi — kiem tra log GitHub Actions"
+    return None
 
 
 def analyze_multi_ai(symbol: str, technical: dict, deep: dict,
