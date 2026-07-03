@@ -76,25 +76,30 @@ def _parse(raw: str) -> dict | None:
 def _call_gemini(prompt: str) -> dict | None:
     if not config.GEMINI_API_KEY:
         return None
-    models_to_try = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
-    try:
-        from google import genai
-        client = genai.Client(api_key=config.GEMINI_API_KEY)
-        for model_name in models_to_try:
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                )
-                result = _parse(response.text or "")
+    import requests as req
+    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+    base_url = "https://generativelanguage.googleapis.com/v1beta/models"
+    for model_name in models_to_try:
+        try:
+            url = f"{base_url}/{model_name}:generateContent?key={config.GEMINI_API_KEY}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500},
+            }
+            resp = req.post(url, json=payload, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                raw = (data.get("candidates", [{}])[0]
+                           .get("content", {})
+                           .get("parts", [{}])[0]
+                           .get("text", ""))
+                result = _parse(raw)
                 if result:
                     return result
-            except Exception:
-                continue
-        return None
-    except Exception as e:
-        logger.warning("Gemini market summary loi: %s", e)
-        return None
+        except Exception:
+            continue
+    logger.warning("Gemini market summary: tat ca model deu loi")
+    return None
 
 
 def get_market_summary(results: list[dict], period_label: str) -> str:
