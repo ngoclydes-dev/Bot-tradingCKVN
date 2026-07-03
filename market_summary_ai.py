@@ -1,85 +1,65 @@
 """
 market_summary_ai.py
 ---------------------
-Tổng hợp nhận định thị trường chung từ 3 AI (Claude, GPT-4o, Gemini)
-cho phần cuối báo cáo hằng ngày.
-
-Khác với deep_analysis.py (phân tích từng mã riêng lẻ), module này
-nhận vào TÓM TẮT kết quả toàn bộ watchlist và yêu cầu 3 AI đưa ra:
-  1. Nhận định thị trường chung hôm nay
-  2. Nhóm/mã nổi bật cần chú ý
-  3. Rủi ro/cơ hội lớn nhất trong phiên
-
-Chỉ gọi API 1 lần / 3 AI (không nhân với số mã) nên rất nhanh,
-phù hợp đưa vào cuối báo cáo tự động 8h/13h hằng ngày.
+Dùng Gemini (miễn phí) để tổng hợp nhận định thị trường chung
+cho phần cuối báo cáo hằng ngày. Gọi 1 lần duy nhất cho cả watchlist.
 """
-import logging
 import json
+import logging
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import config
 
 logger = logging.getLogger(__name__)
 
-AI_TIMEOUT = 20
-
-MARKET_PROMPT = """Bạn là chuyên gia phân tích thị trường chứng khoán Việt Nam.
-Dưới đây là tóm tắt kết quả phân tích kỹ thuật toàn bộ watchlist trong phiên {period}:
+MARKET_PROMPT = """Ban la chuyen gia phan tich thi truong chung khoan Viet Nam.
+Duoi day la tom tat ket qua phan tich ky thuat toan bo watchlist phien {period}:
 
 {summary_block}
 
-Dựa vào dữ liệu trên, hãy đưa ra nhận định thị trường ngắn gọn.
-Trả lời CHỈ bằng JSON, không thêm chữ nào khác:
+Dua vao du lieu tren, hay dua ra nhan dinh thi truong ngan gon.
+Tra loi CHI bang JSON, khong them chu nao khac:
 {{
-  "market_mood": <"tích cực" | "tiêu cực" | "trung tính" | "hỗn hợp">,
+  "market_mood": <"tich cuc" | "tieu cuc" | "trung tinh" | "hon hop">,
   "confidence": <1-10>,
-  "highlight": "<mã hoặc nhóm ngành nổi bật nhất cần chú ý, 1 câu>",
-  "opportunity": "<cơ hội lớn nhất trong phiên, 1 câu>",
-  "risk": "<rủi ro chính cần thận trọng, 1 câu>",
-  "action": "<khuyến nghị hành động tổng thể: mua/bán/chờ/quan sát, và lý do ngắn gọn>"
+  "highlight": "<ma hoac nhom nganh noi bat nhat can chu y, 1 cau>",
+  "opportunity": "<co hoi lon nhat trong phien, 1 cau>",
+  "risk": "<rui ro chinh can than trong, 1 cau>",
+  "action": "<khuyen nghi hanh dong tong the va ly do ngan gon>"
 }}"""
 
 
 def _build_summary_block(results: list[dict]) -> str:
-    """Tóm tắt toàn bộ watchlist thành 1 đoạn text ngắn gọn cho AI đọc."""
-    lines = []
-    breakout = [r["symbol"] for r in results if r["technical"]["breakout"]["is_breakout"]]
+    n = len(results)
+    if not n:
+        return ""
+    breakout  = [r["symbol"] for r in results if r["technical"]["breakout"]["is_breakout"]]
     high_prob = [r["symbol"] for r in results if r["prediction"]["probability_up_pct"] >= 65]
     low_prob  = [r["symbol"] for r in results if r["prediction"]["probability_up_pct"] <= 35]
-    overbought = [r["symbol"] for r in results if r["technical"]["rsi"] >= config.RSI_OVERBOUGHT]
-    oversold   = [r["symbol"] for r in results if r["technical"]["rsi"] <= config.RSI_OVERSOLD]
-    uptrend    = [r["symbol"] for r in results if r["technical"]["ma_trend"] == "tăng"]
-    downtrend  = [r["symbol"] for r in results if r["technical"]["ma_trend"] == "giảm"]
+    uptrend   = [r["symbol"] for r in results if r["technical"]["ma_trend"] == "tang"]
+    downtrend = [r["symbol"] for r in results if r["technical"]["ma_trend"] == "giam"]
+    avg_prob  = round(sum(r["prediction"]["probability_up_pct"] for r in results) / n, 1)
 
-    # Tỷ lệ tổng quan
-    n = len(results)
-    avg_prob = round(sum(r["prediction"]["probability_up_pct"] for r in results) / n, 1) if n else 50
-
-    lines.append(f"Tổng số mã theo dõi: {n}")
-    lines.append(f"Xác suất tăng giá trung bình: {avg_prob}%")
-    lines.append(f"Xu hướng tăng (MA20): {len(uptrend)}/{n} mã — {', '.join(uptrend) if uptrend else 'không có'}")
-    lines.append(f"Xu hướng giảm (MA20): {len(downtrend)}/{n} mã — {', '.join(downtrend) if downtrend else 'không có'}")
-    lines.append(f"Breakout hôm nay: {', '.join(breakout) if breakout else 'không có'}")
-    lines.append(f"Xác suất tăng cao (≥65%): {', '.join(high_prob) if high_prob else 'không có'}")
-    lines.append(f"Xác suất giảm cao (≤35%): {', '.join(low_prob) if low_prob else 'không có'}")
-    lines.append(f"RSI quá mua (≥{config.RSI_OVERBOUGHT}): {', '.join(overbought) if overbought else 'không có'}")
-    lines.append(f"RSI quá bán (≤{config.RSI_OVERSOLD}): {', '.join(oversold) if oversold else 'không có'}")
-
-    # Chi tiết từng mã (ngắn gọn)
-    lines.append("\nChi tiết từng mã:")
+    lines = [
+        f"Tong so ma theo doi: {n}",
+        f"Xac suat tang gia trung binh: {avg_prob}%",
+        f"Xu huong tang (MA20): {len(uptrend)}/{n} ma — {', '.join(uptrend) or 'khong co'}",
+        f"Xu huong giam (MA20): {len(downtrend)}/{n} ma — {', '.join(downtrend) or 'khong co'}",
+        f"Breakout hom nay: {', '.join(breakout) or 'khong co'}",
+        f"Xac suat tang cao (>=65%): {', '.join(high_prob) or 'khong co'}",
+        f"Xac suat giam cao (<=35%): {', '.join(low_prob) or 'khong co'}",
+        "\nChi tiet tung ma:",
+    ]
     for r in results:
-        t = r["technical"]
-        p = r["prediction"]
+        t, p = r["technical"], r["prediction"]
         lines.append(
-            f"  {r['symbol']}: giá {t['last_close']:,.0f}đ ({t['change_pct']:+.1f}%) | "
-            f"RSI={t['rsi']} | MA={t['ma_trend']} | "
-            f"Xác suất tăng={p['probability_up_pct']}%"
+            f"  {r['symbol']}: gia {t['last_close']:,.0f}d ({t['change_pct']:+.1f}%) | "
+            f"RSI={t['rsi']} | MA={t['ma_trend']} | XS tang={p['probability_up_pct']}%"
         )
     return "\n".join(lines)
 
 
-def _parse_response(raw: str) -> dict | None:
+def _parse(raw: str) -> dict | None:
     text = re.sub(r"```(?:json)?|```", "", raw).strip()
     try:
         return json.loads(text)
@@ -93,188 +73,80 @@ def _parse_response(raw: str) -> dict | None:
     return None
 
 
-def _call_claude(prompt: str) -> dict | None:
-    if not config.ANTHROPIC_API_KEY:
-        return None
-    try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        resp = client.messages.create(
-            model=config.ANTHROPIC_MODEL,
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return _parse_response("".join(b.text for b in resp.content if b.type == "text"))
-    except Exception as e:
-        logger.warning("Claude market summary lỗi: %s", e)
-        return None
-
-
-def _call_gpt(prompt: str) -> dict | None:
-    if not config.OPENAI_API_KEY:
-        return None
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=config.OPENAI_API_KEY)
-        resp = client.chat.completions.create(
-            model=config.OPENAI_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=400,
-            response_format={"type": "json_object"},
-        )
-        return _parse_response(resp.choices[0].message.content or "")
-    except Exception as e:
-        logger.warning("GPT market summary lỗi: %s", e)
-        return None
-
-
 def _call_gemini(prompt: str) -> dict | None:
     if not config.GEMINI_API_KEY:
         return None
-    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-pro"]
+    models_to_try = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=config.GEMINI_API_KEY)
+        from google import genai
+        client = genai.Client(api_key=config.GEMINI_API_KEY)
         for model_name in models_to_try:
             try:
-                model = genai.GenerativeModel(model_name)
-                resp  = model.generate_content(prompt)
-                result = _parse_response(resp.text or "")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                )
+                result = _parse(response.text or "")
                 if result:
                     return result
             except Exception:
                 continue
-        logger.warning("Gemini market summary: tất cả model đều lỗi")
         return None
     except Exception as e:
-        logger.warning("Gemini market summary lỗi: %s", e)
+        logger.warning("Gemini market summary loi: %s", e)
         return None
 
 
 def get_market_summary(results: list[dict], period_label: str) -> str:
-    """
-    Gọi 3 AI song song, tổng hợp nhận định thị trường.
-    results: list kết quả từ analyze_one_symbol() trong main.py
-    Trả về chuỗi Markdown sẵn sàng gửi Telegram.
-    """
     if not results:
         return ""
-
-    # Kiểm tra AI nào có key
-    active = {}
-    if config.ANTHROPIC_API_KEY: active["Claude"]  = _call_claude
-    if config.OPENAI_API_KEY:    active["GPT-4o"]  = _call_gpt
-    if config.GEMINI_API_KEY:    active["Gemini"]  = _call_gemini
-
-    if not active:
-        # Không có AI nào — dùng rule-based đơn giản
+    if not config.GEMINI_API_KEY:
         return _rule_based_summary(results)
 
     summary_block = _build_summary_block(results)
-    prompt = MARKET_PROMPT.format(
-        period=period_label,
-        summary_block=summary_block,
-    )
+    prompt = MARKET_PROMPT.format(period=period_label, summary_block=summary_block)
+    result = _call_gemini(prompt)
 
-    # Gọi song song
-    ai_results: dict[str, dict | None] = {}
-    with ThreadPoolExecutor(max_workers=len(active)) as executor:
-        futures = {executor.submit(fn, prompt): name for name, fn in active.items()}
-        for future in as_completed(futures, timeout=AI_TIMEOUT + 5):
-            name = futures[future]
-            try:
-                ai_results[name] = future.result(timeout=AI_TIMEOUT)
-            except Exception as e:
-                logger.warning("%s timeout/lỗi: %s", name, e)
-                ai_results[name] = None
-
-    valid = {k: v for k, v in ai_results.items() if v}
-    if not valid:
+    if not result:
         return _rule_based_summary(results)
 
-    return _format_market_summary(valid, results)
-
-
-def _format_market_summary(valid: dict[str, dict], results: list[dict]) -> str:
-    """Format kết quả 3 AI thành khối tổng kết thị trường."""
-
-    # Tính đồng thuận
-    moods = [r["market_mood"] for r in valid.values() if "market_mood" in r]
-    mood_counts = {m: moods.count(m) for m in set(moods)}
-    consensus_mood = max(mood_counts, key=mood_counts.get) if moods else "trung tính"
-    confs = [r["confidence"] for r in valid.values()
-             if "confidence" in r and isinstance(r["confidence"], (int, float))]
-    avg_conf = round(sum(confs) / len(confs), 1) if confs else 0
-    n_valid = len(valid)
-    max_agree = max(mood_counts.values()) if mood_counts else 0
-
-    # Icon tâm lý thị trường
     mood_icon = {
-        "tích cực": "🟢", "tiêu cực": "🔴",
-        "trung tính": "🟡", "hỗn hợp": "🟠"
-    }.get(consensus_mood, "⚪")
+        "tich cuc": "🟢", "tieu cuc": "🔴",
+        "trung tinh": "🟡", "hon hop": "🟠"
+    }.get(result.get("market_mood", ""), "⚪")
 
-    agree_text = (
-        f"đồng thuận ({n_valid}/{n_valid})" if max_agree == n_valid else
-        f"đa số ({max_agree}/{n_valid})"    if max_agree > 1 else
-        f"bất đồng ({n_valid} AI khác nhau)"
-    )
-
+    conf = result.get("confidence", 0)
     lines = [
         "─" * 30,
-        f"🌐 *NHẬN ĐỊNH THỊ TRƯỜNG — ĐA AI*",
-        f"AI tham gia: {' • '.join(valid.keys())}",
-        f"{mood_icon} Tâm lý chung: *{consensus_mood.upper()}* ({agree_text})",
-        f"Độ tin cậy TB: {avg_conf}/10",
+        "🌐 *NHAN DINH THI TRUONG — Gemini AI*",
+        f"{mood_icon} Tam ly chung: *{result.get('market_mood','?').upper()}* | "
+        f"Do tin cay: {conf}/10",
         "",
+        f"📌 *Noi bat:* {result.get('highlight', '')}",
+        f"💡 *Co hoi:* {result.get('opportunity', '')}",
+        f"⚠️ *Rui ro:* {result.get('risk', '')}",
+        "",
+        f"🎯 *Khuyen nghi:* {result.get('action', '')}",
     ]
-
-    # Tổng hợp các điểm đồng thuận
-    highlights  = [r.get("highlight",  "") for r in valid.values() if r.get("highlight")]
-    opps        = [r.get("opportunity","") for r in valid.values() if r.get("opportunity")]
-    risks       = [r.get("risk",       "") for r in valid.values() if r.get("risk")]
-    actions     = [r.get("action",     "") for r in valid.values() if r.get("action")]
-
-    if highlights:
-        lines.append(f"📌 *Nổi bật:* {highlights[0]}")
-    if opps:
-        lines.append(f"💡 *Cơ hội:* {opps[0]}")
-    if risks:
-        lines.append(f"⚠️ *Rủi ro:* {risks[0]}")
-
-    lines.append("")
-
-    # Khuyến nghị từng AI
-    for name, result in valid.items():
-        if not result or not result.get("action"):
-            continue
-        emoji = {"Claude": "🟣", "GPT-4o": "🟢", "Gemini": "🔵"}.get(name, "⚪")
-        lines.append(f"{emoji} *{name}:* {result['action']}")
-
     return "\n".join(lines)
 
 
 def _rule_based_summary(results: list[dict]) -> str:
-    """Fallback không cần AI — tổng kết thống kê đơn giản."""
     n = len(results)
     if not n:
         return ""
-
-    uptrend   = sum(1 for r in results if r["technical"]["ma_trend"] == "tăng")
+    uptrend   = sum(1 for r in results if r["technical"]["ma_trend"] == "tang")
     breakouts = [r["symbol"] for r in results if r["technical"]["breakout"]["is_breakout"]]
     avg_prob  = round(sum(r["prediction"]["probability_up_pct"] for r in results) / n, 1)
-
-    mood = "tích cực" if uptrend > n * 0.6 else "tiêu cực" if uptrend < n * 0.4 else "trung tính"
-    mood_icon = {"tích cực": "🟢", "tiêu cực": "🔴", "trung tính": "🟡"}.get(mood, "🟡")
-
+    mood      = "tich cuc" if uptrend > n * 0.6 else "tieu cuc" if uptrend < n * 0.4 else "trung tinh"
+    icon      = {"tich cuc": "🟢", "tieu cuc": "🔴", "trung tinh": "🟡"}.get(mood, "🟡")
     lines = [
         "─" * 30,
-        f"🌐 *TỔNG KẾT THỊ TRƯỜNG*",
-        f"{mood_icon} Tâm lý chung: *{mood.upper()}*",
-        f"• {uptrend}/{n} mã đang trong xu hướng tăng (MA20)",
-        f"• Xác suất tăng giá TB toàn watchlist: {avg_prob}%",
+        "🌐 *TONG KET THI TRUONG*",
+        f"{icon} Tam ly chung: *{mood.upper()}*",
+        f"• {uptrend}/{n} ma dang trong xu huong tang (MA20)",
+        f"• Xac suat tang gia trung binh: {avg_prob}%",
     ]
     if breakouts:
-        lines.append(f"• Mã breakout: {', '.join(breakouts)}")
-
+        lines.append(f"• Ma breakout: {', '.join(breakouts)}")
     return "\n".join(lines)
