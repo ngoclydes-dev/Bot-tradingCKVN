@@ -15,8 +15,8 @@ TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ====== DANH SACH MA THEO DOI (HOSE/HNX) ======
 WATCHLIST = [
-    "VNM", "VNM", "FPT", "HPG", "VIC",
-    "POW", "VHM", "MBB", "TCB",
+    "VNM", "VCB", "FPT", "HPG", "VIC",
+    "MWG", "SSI", "VHM", "MBB", "TCB",
 ]
 
 # ====== THAM SO KY THUAT ======
@@ -71,10 +71,8 @@ WEIGHTS = {
 
 # ====== API KEYS (doc tu bien moi truong / GitHub Secrets) ======
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-OPENAI_API_KEY    = os.getenv("OPENAI_API_KEY", "")
 GEMINI_API_KEY    = os.getenv("GEMINI_API_KEY", "")
 
 # Model su dung
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-OPENAI_MODEL    = "gpt-4o-mini"
 GEMINI_MODEL    = "gemini-2.0-flash"
