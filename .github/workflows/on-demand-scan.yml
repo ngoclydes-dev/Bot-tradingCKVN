@@ -23,38 +23,42 @@ jobs:
       - name: Cai dat thu vien
         run: pip install -r requirements.txt
 
-      - name: Test Gemini API truc tiep
+      - name: Kiem tra moi truong truoc khi chay
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python3 - << 'PYEOF'
           import os, sys
-          key = os.getenv("GEMINI_API_KEY", "")
-          print(f"GEMINI_API_KEY: {'CO KEY (' + str(len(key)) + ' ky tu)' if key else 'KHONG CO KEY'}")
-          if not key:
-              print("ERROR: Chua them GEMINI_API_KEY vao GitHub Secrets")
-              sys.exit(0)
 
-          try:
-              from google import genai
-              client = genai.Client(api_key=key)
-              print("Thu model: gemini-2.0-flash...")
-              response = client.models.generate_content(
-                  model="gemini-2.0-flash",
-                  contents="Tra loi bang 1 tu: chao",
-              )
-              print("Gemini OK! Ket qua:", response.text[:50])
-          except Exception as e:
-              print(f"Gemini LOI: {e}")
+          print("=== KIEM TRA SECRETS ===")
+          secrets = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"]
+          for s in secrets:
+              val = os.getenv(s, "")
+              print(f"{s}: {'CO (' + str(len(val)) + ' ky tu)' if val else 'KHONG CO'}")
+
+          print("\n=== KIEM TRA THU VIEN ===")
+          libs = ["yfinance", "pandas", "numpy", "requests", "feedparser", "anthropic"]
+          for lib in libs:
               try:
-                  print("Thu model du phong: gemini-1.5-flash...")
-                  response = client.models.generate_content(
-                      model="gemini-1.5-flash",
-                      contents="Tra loi bang 1 tu: chao",
-                  )
-                  print("Gemini 1.5 OK! Ket qua:", response.text[:50])
-              except Exception as e2:
-                  print(f"Gemini 1.5 cung LOI: {e2}")
+                  __import__(lib)
+                  print(f"{lib}: OK")
+              except ImportError as e:
+                  print(f"{lib}: LOI - {e}")
+
+          print("\n=== KIEM TRA IMPORT MODULES BOT ===")
+          sys.path.insert(0, '.')
+          modules = ["config", "data_fetcher", "indicators", "news_fetcher",
+                     "ai_analyzer", "entry_strategy", "deep_analysis",
+                     "multi_ai", "market_summary_ai", "main"]
+          for mod in modules:
+              try:
+                  __import__(mod)
+                  print(f"{mod}: OK")
+              except Exception as e:
+                  print(f"{mod}: LOI - {e}")
           PYEOF
 
       - name: Phan tich ma va gui Telegram
