@@ -15,20 +15,12 @@ import config
 
 logger = logging.getLogger(__name__)
 
-ANALYSIS_PROMPT = """Bạn là chuyên gia phân tích chứng khoán Việt Nam.
-Dưới đây là dữ liệu kỹ thuật và tin tức của mã {symbol}:
+ANALYSIS_PROMPT = """Phan tich ngan gon co phieu {symbol} Viet Nam tu du lieu sau:
 
 {data_block}
 
-Hãy phân tích và trả lời CHỈ bằng JSON (không thêm bất kỳ chữ nào khác):
-{{
-  "sentiment": <"tích cực" | "tiêu cực" | "trung tính">,
-  "outlook": <"tăng" | "giảm" | "sideway">,
-  "confidence": <số 1-10, mức độ chắc chắn của nhận định>,
-  "key_signal": "<tín hiệu kỹ thuật quan trọng nhất trong 1 câu>",
-  "risk": "<rủi ro chính cần chú ý trong 1 câu>",
-  "summary": "<nhận định tổng hợp trong 2-3 câu tiếng Việt>"
-}}"""
+Tra loi CHI bang JSON (khong them chu nao):
+{{"sentiment":"<tich cuc|tieu cuc|trung tinh>","outlook":"<tang|giam|sideway>","confidence":<1-10>,"key_signal":"<tin hieu chinh 1 cau>","risk":"<rui ro chinh 1 cau>","summary":"<nhan dinh 2 cau tieng Viet>"}}"""
 
 
 def _build_data_block(symbol: str, technical: dict, deep: dict,
@@ -86,9 +78,9 @@ def _call_gemini(prompt: str) -> dict | None:
 
     # Dùng HTTP trực tiếp — không cần thư viện google-genai, tránh version conflict
     models_to_try = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
+        "gemini-2.0-flash-lite",  # 30 RPM, 1500 RPD - quota cao nhất free tier
+        "gemini-2.0-flash",       # 15 RPM, 1500 RPD
+        "gemini-2.5-flash-lite",  # 30 RPM, 1500 RPD
     ]
     base_url = "https://generativelanguage.googleapis.com/v1beta/models"
 
