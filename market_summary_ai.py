@@ -123,15 +123,15 @@ def get_market_summary(results: list[dict], period_label: str) -> str:
     conf = result.get("confidence", 0)
     lines = [
         "─" * 30,
-        "🌐 *NHAN DINH THI TRUONG — Gemini AI*",
-        f"{mood_icon} Tam ly chung: *{result.get('market_mood','?').upper()}* | "
-        f"Do tin cay: {conf}/10",
+        "🌐 *NHẬN ĐỊNH THỊ TRƯỜNG — Gemini AI*",
+        f"{mood_icon} Tâm lý chung: *{result.get('market_mood','?').upper()}* | "
+        f"Độ tin cậy: {conf}/10",
         "",
-        f"📌 *Noi bat:* {result.get('highlight', '')}",
-        f"💡 *Co hoi:* {result.get('opportunity', '')}",
-        f"⚠️ *Rui ro:* {result.get('risk', '')}",
+        f"📌 *Nổi bật:* {result.get('highlight', '')}",
+        f"💡 *Cơ hội:* {result.get('opportunity', '')}",
+        f"⚠️ *Rủi ro:* {result.get('risk', '')}",
         "",
-        f"🎯 *Khuyen nghi:* {result.get('action', '')}",
+        f"🎯 *Khuyến nghị:* {result.get('action', '')}",
     ]
     return "\n".join(lines)
 
@@ -140,18 +140,18 @@ def _rule_based_summary(results: list[dict]) -> str:
     n = len(results)
     if not n:
         return ""
-    uptrend   = sum(1 for r in results if r["technical"]["ma_trend"] == "tang")
+    uptrend   = sum(1 for r in results if r["technical"]["ma_trend"] == "tăng")
     breakouts = [r["symbol"] for r in results if r["technical"]["breakout"]["is_breakout"]]
     avg_prob  = round(sum(r["prediction"]["probability_up_pct"] for r in results) / n, 1)
-    mood      = "tich cuc" if uptrend > n * 0.6 else "tieu cuc" if uptrend < n * 0.4 else "trung tinh"
-    icon      = {"tich cuc": "🟢", "tieu cuc": "🔴", "trung tinh": "🟡"}.get(mood, "🟡")
+    mood      = "tích cực" if uptrend > n * 0.6 else "tiêu cực" if uptrend < n * 0.4 else "trung tính"
+    icon      = {"tích cực": "🟢", "tiêu cực": "🔴", "trung tính": "🟡"}.get(mood, "🟡")
     lines = [
         "─" * 30,
-        "🌐 *TONG KET THI TRUONG*",
-        f"{icon} Tam ly chung: *{mood.upper()}*",
-        f"• {uptrend}/{n} ma dang trong xu huong tang (MA20)",
-        f"• Xac suat tang gia trung binh: {avg_prob}%",
+        "🌐 *TỔNG KẾT THỊ TRƯỜNG*",
+        f"{icon} Tâm lý chung: *{mood.upper()}*",
+        f"• {uptrend}/{n} mã đang trong xu hướng tăng (MA20)",
+        f"• Xác suất tăng giá trung bình: {avg_prob}%",
     ]
     if breakouts:
-        lines.append(f"• Ma breakout: {', '.join(breakouts)}")
+        lines.append(f"• Mã breakout: {', '.join(breakouts)}")
     return "\n".join(lines)
