@@ -110,6 +110,12 @@ def _call_gemini(prompt: str) -> dict | None:
                 if result:
                     logger.info("Gemini OK voi model: %s", model_name)
                     return result
+            elif resp.status_code == 429:
+                # Rate limit — chờ 5 giây rồi thử model tiếp theo
+                logger.warning("Gemini %s: 429 rate limit, cho 5s...", model_name)
+                import time
+                time.sleep(5)
+                continue
             else:
                 logger.warning("Gemini %s HTTP %d: %s",
                                model_name, resp.status_code, resp.text[:100])
@@ -117,13 +123,14 @@ def _call_gemini(prompt: str) -> dict | None:
             logger.warning("Gemini model %s loi: %s", model_name, str(inner)[:80])
             continue
 
-    _ai_errors["Gemini"] = "Tat ca model deu loi — kiem tra log GitHub Actions"
+    # Không dùng _ai_errors dict, chỉ log và return None
+    logger.warning("Gemini: Tat ca model deu that bai")
     return None
 
 
 def analyze_multi_ai(symbol: str, technical: dict, deep: dict,
                      news_items: list[dict]) -> dict:
-    """Gọi Gemini phân tích mã, trả về dict kết quả."""
+    """Gọi Gemini phân tích mã, trả về dict kết quả. Không bao giờ raise exception."""
     if not config.GEMINI_API_KEY:
         return {
             "available_ais": [],
@@ -131,15 +138,26 @@ def analyze_multi_ai(symbol: str, technical: dict, deep: dict,
             "error": "Chua co GEMINI_API_KEY — lay key mien phi tai aistudio.google.com",
         }
 
-    data_block = _build_data_block(symbol, technical, deep, news_items)
-    prompt = ANALYSIS_PROMPT.format(symbol=symbol, data_block=data_block)
-    result = _call_gemini(prompt)
+    try:
+        data_block = _build_data_block(symbol, technical, deep, news_items)
+        prompt = ANALYSIS_PROMPT.format(symbol=symbol, data_block=data_block)
+        result = _call_gemini(prompt)
+    except Exception as e:
+        logger.warning("analyze_multi_ai loi bat ngo: %s", e)
+        result = None
 
-    return {
-        "available_ais": ["Gemini"] if result else [],
-        "gemini_result": result,
-        "error": None if result else "Gemini khong phan hoi — kiem tra API key tai aistudio.google.com",
-    }
+    if result:
+        return {
+            "available_ais": ["Gemini"],
+            "gemini_result": result,
+            "error": None,
+        }
+    else:
+        return {
+            "available_ais": [],
+            "gemini_result": None,
+            "error": "Gemini khong phan hoi (429 quota / loi mang) — thu lai sau.",
+        }
 
 
 def format_multi_ai_block(synthesis: dict) -> str:
