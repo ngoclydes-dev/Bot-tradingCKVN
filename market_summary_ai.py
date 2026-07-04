@@ -77,7 +77,7 @@ def _call_gemini(prompt: str) -> dict | None:
     if not config.GEMINI_API_KEY:
         return None
     import requests as req
-    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+    models_to_try = ["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-2.5-flash-lite"]
     base_url = "https://generativelanguage.googleapis.com/v1beta/models"
     for model_name in models_to_try:
         try:
