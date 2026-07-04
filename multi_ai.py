@@ -155,12 +155,12 @@ def analyze_multi_ai(symbol: str, technical: dict, deep: dict,
 def format_multi_ai_block(synthesis: dict) -> str:
     """Format kết quả Gemini thành đoạn Markdown cho Telegram."""
     if not synthesis.get("available_ais"):
-        err = synthesis.get("error", "Khong co AI nao phan hoi")
-        return f"🤖 *NHAN DINH AI (Gemini)*\n_{err}_"
+        err = synthesis.get("error", "Không có AI nào phản hồi")
+        return f"🤖 *NHẬN ĐỊNH AI (Gemini)*\n_{err}_"
 
     result = synthesis.get("gemini_result", {})
     if not result:
-        return "🤖 *NHAN DINH AI (Gemini)*\n_Khong lay duoc ket qua._"
+        return "🤖 *NHẬN ĐỊNH AI (Gemini)*\n_Không lấy được kết quả._"
 
     outlook_icon = {
         "tang": "🟢", "giam": "🔴", "sideway": "🟡"
@@ -168,21 +168,21 @@ def format_multi_ai_block(synthesis: dict) -> str:
 
     conf = result.get("confidence", 0)
     conf_label = (
-        "rat cao" if conf >= 8 else
+        "rất cao" if conf >= 8 else
         "cao"     if conf >= 6 else
-        "trung binh" if conf >= 4 else
-        "thap"
+        "trung bình" if conf >= 4 else
+        "thấp"
     )
 
     lines = [
-        "🤖 *NHAN DINH AI — Gemini*",
-        f"{outlook_icon} Xu huong: *{result.get('outlook', '?').upper()}* | "
+        "🤖 *NHẬN ĐỊNH AI — Gemini*",
+        f"{outlook_icon} Xu hướng: *{result.get('outlook', '?').upper()}* | "
         f"Sentiment: {result.get('sentiment', '?')} | "
-        f"Do tin cay: {conf}/10 ({conf_label})",
+        f"Độ tin cậy: {conf}/10 ({conf_label})",
         "",
         f"_{result.get('summary', '')}_",
         "",
-        f"• Tin hieu chinh: {result.get('key_signal', '')}",
-        f"• Rui ro can chu y: {result.get('risk', '')}",
+        f"• Tín hiệu chính: {result.get('key_signal', '')}",
+        f"• Rủi ro cần chú ý: {result.get('risk', '')}",
     ]
     return "\n".join(lines)
