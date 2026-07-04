@@ -358,8 +358,16 @@ def run_deep_scan(symbol: str, df: pd.DataFrame,
         "mtf":    multi_timeframe_trend(df),
     }
 
-    # Gọi đa AI song song (Claude + GPT-4o + Gemini)
-    deep["multi_ai"] = multi_ai.analyze_multi_ai(symbol, technical, deep, news_items)
+    # Gọi đa AI song song (có thể thất bại do rate limit, không crash)
+    try:
+        deep["multi_ai"] = multi_ai.analyze_multi_ai(symbol, technical, deep, news_items)
+    except Exception as e:
+        logger.warning("multi_ai.analyze_multi_ai loi: %s", e)
+        deep["multi_ai"] = {
+            "available_ais": [],
+            "gemini_result": None,
+            "error": f"Loi bat ngo: {str(e)[:100]}",
+        }
     return deep
 
 
