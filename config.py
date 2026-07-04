@@ -15,8 +15,8 @@ TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ====== DANH SACH MA THEO DOI (HOSE/HNX) ======
 WATCHLIST = [
-    "VNM", "VCB", "FPT", "HPG", "VIC",
-    "MWG", "SSI", "VHM", "MBB", "TCB",
+    "VNM", "VCB", "POW", "HPG", "VIC",
+    "VHM", "TCB",
 ]
 
 # ====== THAM SO KY THUAT ======
