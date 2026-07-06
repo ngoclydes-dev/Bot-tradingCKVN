@@ -24,6 +24,7 @@ import ai_analyzer
 import entry_strategy
 import deep_analysis
 import market_summary_ai
+import general_news
 import telegram_notifier
 
 logging.basicConfig(
@@ -161,8 +162,12 @@ def build_full_report(period_label: str) -> str:
     logger.info("Đang tổng hợp nhận định thị trường từ đa AI...")
     market_block = market_summary_ai.get_market_summary(all_results, period_label)
 
+    # Tin tức vĩ mô & kinh tế tổng hợp
+    logger.info("Đang lấy tin tức tổng hợp vĩ mô...")
+    general_block = general_news.get_general_news_block()
+
     quote = get_daily_quote()
-    return f"{header}{summary}\n{body}\n\n{market_block}\n\n{quote}"
+    return f"{header}{summary}\n{body}\n\n{market_block}\n\n{general_block}\n\n{quote}"
 
 
 def run_full_report(period_label: str = "Báo cáo định kỳ"):
