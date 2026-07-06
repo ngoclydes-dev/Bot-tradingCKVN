@@ -15,8 +15,8 @@ TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ====== DANH SACH MA THEO DOI (HOSE/HNX) ======
 WATCHLIST = [
-    "VNM", "ACB", "POW", "HPG", "VIC",
-    "VHM", "TCB",
+    "VNM", "VCB", "POW", "HPG", "VIC",
+    "VHM", "ACB", "TCB",
 ]
 
 # ====== THAM SO KY THUAT ======
@@ -31,7 +31,7 @@ BREAKOUT_VOLUME_MULTIPLIER  = 1.5
 
 HISTORY_DAYS = 120
 
-# ====== NGUON TIN TUC (RSS) ======
+# ====== NGUON TIN TUC CHUNG KHOAN (RSS) ======
 NEWS_RSS_FEEDS = {
     "CafeF":            "https://cafef.vn/thi-truong-chung-khoan.rss",
     "VietstockFinance": "https://vietstock.vn/830/chung-khoan/co-phieu.rss",
@@ -39,6 +39,18 @@ NEWS_RSS_FEEDS = {
 }
 NEWS_MAX_ITEMS_PER_FEED = 15
 NEWS_LOOKBACK_HOURS     = 18
+
+# ====== NGUON TIN TUC TONG HOP (kinh te, vi mo, chinh sach) ======
+GENERAL_NEWS_RSS_FEEDS = {
+    "VnExpress Kinh doanh": "https://vnexpress.net/rss/kinh-doanh.rss",
+    "VnExpress The gioi":   "https://vnexpress.net/rss/the-gioi.rss",
+    "Tuoi Tre Kinh te":     "https://tuoitre.vn/rss/kinh-te.rss",
+    "Thanh Nien Kinh te":   "https://thanhnien.vn/rss/tai-chinh-kinh-doanh.rss",
+    "CafeF Kinh te":        "https://cafef.vn/kinh-te-vi-mo.rss",
+    "VnEconomy":            "https://vneconomy.vn/rss/home.rss",
+}
+GENERAL_NEWS_MAX_ITEMS      = 8
+GENERAL_NEWS_LOOKBACK_HOURS = 18
 
 # ====== LICH BAO CAO TU DONG ======
 TIMEZONE     = "Asia/Ho_Chi_Minh"
